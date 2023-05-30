@@ -406,6 +406,10 @@ impl Backend for RustCryptoBackend {
         Ok(verify_data.to_vec())
     }
 
+    async fn prepare_encryption(&mut self) -> Result<(), BackendError> {
+        Ok(())
+    }
+
     async fn encrypt(
         &mut self,
         msg: PlainMessage,

@@ -28,5 +28,6 @@ signature.workspace = true
 tlsn-tls-client = { path = "../../tls/tls-client" }
 
 webpki-roots = "0.22"
+p256 = { workspace = true, features = ["ecdsa"] }
 
 tokio = { version = "1.23", features = ["macros", "rt", "rt-multi-thread"] }

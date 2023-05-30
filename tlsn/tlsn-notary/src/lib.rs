@@ -14,6 +14,7 @@ use actor_ot::{
     ObliviousReveal,
 };
 
+use mpc_core::serialize::CanonicalSerialize;
 use mpc_garble::{config::Role as GarbleRole, protocol::deap::DEAPVm};
 use mpc_share_conversion as ff;
 use rand::Rng;
@@ -189,12 +190,12 @@ impl Notary {
                 handshake_summary,
             );
 
-            let signature = signer.sign(&session_header);
+            let signature = signer.sign(&session_header.to_bytes());
 
             notarize_channel
                 .send(TlsnMessage::SignedSessionHeader(SignedSessionHeader {
                     header: session_header.clone(),
-                    signature,
+                    signature: signature.into(),
                 }))
                 .await?;
 

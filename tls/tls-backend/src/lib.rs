@@ -89,6 +89,8 @@ pub trait Backend: Send {
     async fn get_server_finished_vd(&mut self, hash: &[u8]) -> Result<Vec<u8>, BackendError>;
     /// Returns ClientFinished verify_data.
     async fn get_client_finished_vd(&mut self, hash: &[u8]) -> Result<Vec<u8>, BackendError>;
+    /// Prepares the backend for encryption.
+    async fn prepare_encryption(&mut self) -> Result<(), BackendError>;
     /// Perform the encryption over the concerned TLS message.
     async fn encrypt(&mut self, msg: PlainMessage, seq: u64)
         -> Result<OpaqueMessage, BackendError>;

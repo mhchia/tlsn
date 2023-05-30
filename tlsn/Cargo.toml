@@ -25,6 +25,7 @@ tokio-util = { version = "0.7", features = ["compat"] }
 
 rand = "0.8"
 signature = "2.0"
+p256 = "0.13"
 
 derive_builder = "0.11"
 thiserror = "1"

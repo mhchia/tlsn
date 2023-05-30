@@ -7,6 +7,7 @@ use actor_ot::{
 use futures::{AsyncRead, AsyncWrite};
 use mpc_garble::{config::Role as GarbleRole, protocol::deap::DEAPVm};
 use mpc_share_conversion as ff;
+use p256::ecdsa::signature::Signer;
 use tlsn_notary::{Notary, NotaryConfig};
 use tlsn_tls_mpc::{
     setup_components, MpcTlsCommonConfig, MpcTlsFollower, MpcTlsFollowerConfig, MpcTlsLeader,
@@ -23,9 +24,11 @@ async fn test() {
     let config = NotaryConfig::builder().build().unwrap();
     let mut notary = Notary::new(config);
 
+    let notary_signing_key = p256::ecdsa::SigningKey::from_bytes(&[1u8; 32].into()).unwrap();
+
     let (_, notary_res) = tokio::join!(
         prover(leader_socket.compat()),
-        notary.run(follower_socket.compat(), todo!())
+        notary.run::<_, p256::ecdsa::Signature>(follower_socket.compat(), &notary_signing_key)
     );
 
     notary_res.unwrap();
@@ -42,13 +45,13 @@ async fn prover<S: AsyncWrite + AsyncRead + Send + Sync + Unpin + 'static>(socke
 
     let leader_ot_send_config = OTActorSenderConfig::builder()
         .id("ot/0")
-        .initial_count(200_000)
+        .initial_count((2 << 14) * 8)
         .build()
         .unwrap();
 
     let leader_ot_recv_config = OTActorReceiverConfig::builder()
         .id("ot/1")
-        .initial_count(200_000)
+        .initial_count((2 << 14) * 8)
         .committed()
         .build()
         .unwrap();

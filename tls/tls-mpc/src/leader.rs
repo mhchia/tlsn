@@ -17,7 +17,7 @@ use tls_core::{
     cipher::make_tls12_aad,
     handshake::HandshakeData,
     ke::ServerKxDetails,
-    key::{PublicKey, ServerSignature},
+    key::PublicKey,
     msgs::{
         base::Payload,
         enums::{CipherSuite, ContentType, NamedGroup, ProtocolVersion},
@@ -422,10 +422,6 @@ impl Backend for MpcTlsLeader {
         self.set_server_key(key)
             .map_err(|_| BackendError::InvalidServerKey)?;
 
-        self.compute_session_keys()
-            .await
-            .map_err(|e| BackendError::InternalError(e.to_string()))?;
-
         Ok(())
     }
 
@@ -457,6 +453,14 @@ impl Backend for MpcTlsLeader {
             .compute_client_finished_vd(hash)
             .await
             .map_err(|e| BackendError::InternalError(e.to_string()))?)
+    }
+
+    async fn prepare_encryption(&mut self) -> Result<(), BackendError> {
+        self.compute_session_keys()
+            .await
+            .map_err(|e| BackendError::InternalError(e.to_string()))?;
+
+        Ok(())
     }
 
     async fn encrypt(

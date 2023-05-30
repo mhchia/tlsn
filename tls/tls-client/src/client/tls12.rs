@@ -858,11 +858,12 @@ impl State<ClientConnectionData> for ExpectServerDone {
         let server_key_share =
             PublicKey::new(ecdh_params.curve_params.named_group, &ecdh_params.public.0);
 
+        cx.common.backend.set_server_kx_details(st.server_kx);
         cx.common
             .backend
             .set_server_key_share(server_key_share)
             .await?;
-        cx.common.backend.set_server_kx_details(st.server_kx);
+        cx.common.backend.prepare_encryption().await?;
         cx.common.record_layer.prepare_message_encrypter();
         cx.common.record_layer.prepare_message_decrypter();
         cx.common.record_layer.start_encrypting();
