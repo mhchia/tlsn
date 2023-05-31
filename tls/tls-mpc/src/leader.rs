@@ -208,8 +208,6 @@ impl MpcTlsLeader {
                 .await?;
         }
 
-        println!("leader sent handshake commit");
-
         self.conn_state.handshake_data = Some(handshake_data);
 
         let server_key = p256::PublicKey::from_sec1_bytes(&server_key.key)
@@ -217,11 +215,7 @@ impl MpcTlsLeader {
 
         self.ke.set_server_key(server_key);
 
-        println!("leader start pms");
-
         let pms = self.ke.compute_pms().await?;
-
-        println!("leader computed pms");
 
         let SessionKeys {
             client_write_key,
@@ -270,7 +264,6 @@ impl MpcTlsLeader {
         m: PlainMessage,
         seq: u64,
     ) -> Result<OpaqueMessage, MpcTlsError> {
-        println!("mpc leader encrypting: {}", m.payload.0.len());
         let explicit_nonce = seq.to_be_bytes().to_vec();
 
         let aad = make_tls12_aad(seq, m.typ, m.version, m.payload.0.len());
@@ -330,7 +323,6 @@ impl MpcTlsLeader {
         m: OpaqueMessage,
         seq: u64,
     ) -> Result<PlainMessage, MpcTlsError> {
-        println!("mpc follower decrypting: {}", m.payload.0.len());
         let mut payload = m.payload.0;
 
         let explicit_nonce: Vec<u8> = payload.drain(..8).collect();

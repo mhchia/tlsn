@@ -105,8 +105,6 @@ where
             res = setup_mpc_backend(&self.config, mux).fuse() => res?,
         };
 
-        println!("prover mpc backend setup");
-
         let mut root_store = tls_client::RootCertStore::empty();
         root_store.add_server_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(|ta| {
             tls_client::OwnedTrustAnchor::from_subject_spki_name_constraints(
@@ -193,15 +191,11 @@ async fn setup_mpc_backend(
     ),
     ProverError,
 > {
-    println!("prover: ot sender and receiver start");
-
     let ((mut ot_send, ot_send_fut), (mut ot_recv, ot_recv_fut)) = futures::try_join!(
         create_ot_sender(mux.clone(), config.build_ot_sender_config()),
         create_ot_receiver(mux.clone(), config.build_ot_receiver_config())
     )
     .unwrap();
-
-    println!("prover: ot sender and receiver created");
 
     // Join the OT background futures so they can be polled together
     let mut ot_fut = Box::pin(join(ot_send_fut, ot_recv_fut).map(|_| ()).fuse());
@@ -210,8 +204,6 @@ async fn setup_mpc_backend(
         _ = &mut ot_fut => panic!("OT background task failed"),
         res = try_join(ot_send.setup(), ot_recv.setup()).fuse() => _ = res.unwrap(),
     }
-
-    println!("prover: ot sender and receiver setup");
 
     let mut vm = DEAPVm::new(
         "vm",
@@ -267,7 +259,6 @@ async fn run_client<T: AsyncWrite + AsyncRead + Unpin>(
     mut rx_sender: channel::mpsc::Sender<Result<Bytes, std::io::Error>>,
     mut close_tls_receiver: channel::oneshot::Receiver<()>,
 ) -> Result<(), ProverError> {
-    println!("prover: client start");
     client.start().await?;
 
     let (mut server_rx, mut server_tx) = server_socket.split();
@@ -284,13 +275,10 @@ async fn run_client<T: AsyncWrite + AsyncRead + Unpin>(
             read_res = &mut rx_tls_fut => {
                 let received = read_res?;
 
-                println!("prover: client received {} bytes", received);
-
                 // Loop until we've processed all the data we received in this read.
                 let mut processed = 0;
                 while processed < received {
                     processed += client.read_tls(&mut &rx_tls_buf[processed..received])?;
-                    println!("handshaking: {}", client.is_handshaking());
                     match client.process_new_packets().await {
                         Ok(_) => {}
                         Err(e) => {
@@ -312,7 +300,6 @@ async fn run_client<T: AsyncWrite + AsyncRead + Unpin>(
                 rx_tls_fut = server_rx.read(&mut rx_tls_buf).fuse();
             }
             data = tx_receiver.select_next_some() => {
-                println!("forwarding data: {:?}", &data);
                 transcript_tx.extend(&data);
                 client
                     .write_all_plaintext(&data)
@@ -354,8 +341,6 @@ async fn run_client<T: AsyncWrite + AsyncRead + Unpin>(
                 Err(e) => return Err(e)?,
             };
 
-            println!("returning {} bytes", n);
-
             if n > 0 {
                 transcript_rx.extend(&rx_buf[..n]);
                 rx_sender
@@ -382,8 +367,6 @@ async fn run_client<T: AsyncWrite + AsyncRead + Unpin>(
     if !client.received_close_notify() {
         return Err(ProverError::ServerNoCloseNotify);
     }
-
-    println!("prover: client done");
 
     Ok(())
 }

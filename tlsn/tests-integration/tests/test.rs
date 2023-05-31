@@ -1,6 +1,6 @@
 use std::println;
 
-use hyper::{Body, Request, StatusCode};
+use hyper::{body::to_bytes, Body, Request, StatusCode};
 use tlsn_notary::{Notary, NotaryConfig};
 use tlsn_prover::{Prover, ProverConfig};
 use tokio::io::{AsyncRead, AsyncWrite};
@@ -50,7 +50,6 @@ async fn prover<T: AsyncWrite + AsyncRead + Send + Unpin + 'static>(notary_socke
 
     let request = Request::builder()
         .header("Host", "tlsnotary.org")
-        .header("Connection", "close")
         .method("GET")
         .body(Body::from(""))
         .unwrap();
@@ -63,7 +62,10 @@ async fn prover<T: AsyncWrite + AsyncRead + Send + Unpin + 'static>(notary_socke
 
     assert!(response.status() == StatusCode::OK);
 
-    println!("Response: {:?}", response);
+    println!(
+        "Response: {:?}",
+        to_bytes(response.into_body()).await.unwrap()
+    );
 }
 
 async fn notary<T: AsyncWrite + AsyncRead + Send + Sync + Unpin + 'static>(socket: T) {

@@ -76,22 +76,16 @@ impl Notary {
             )
         };
 
-        println!("notary: ot sender and receiver start");
-
         let ((mut ot_send, ot_send_fut), (mut ot_recv, ot_recv_fut)) = futures::select! {
             err = muxer_fut => return Err(err.expect_err("muxer runs until connection closes"))?,
             res = ot_fut.fuse() => res.map_err(|err| NotaryError::MpcError(Box::new(err)))?,
         };
-
-        println!("notary: ot sender and receiver created");
 
         let notarize_fut = async {
             let encoder_seed: [u8; 32] = rand::rngs::OsRng.gen();
 
             futures::try_join!(ot_send.setup(), ot_recv.setup())
                 .map_err(|e| NotaryError::MpcError(Box::new(e)))?;
-
-            println!("notary: ot sender and receiver setup");
 
             let mut vm = DEAPVm::new(
                 "vm",
@@ -161,11 +155,7 @@ impl Notary {
                 .unwrap()
                 .as_secs();
 
-            println!("notary mpc tls start");
-
             mpc_tls.run().await?;
-
-            println!("notary mpc tls done");
 
             let mut notarize_channel = mux.get_channel("notarize").await?;
 

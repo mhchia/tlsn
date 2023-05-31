@@ -106,13 +106,7 @@ impl MpcTlsFollower {
             self.handshake_commitment = Some(handshake_commitment);
         }
 
-        println!("follower received handshake commitment");
-
-        println!("follower start pms");
-
         let pms = self.ke.compute_pms().await?;
-
-        println!("follower computed pms");
 
         // PRF
         let SessionKeys {
@@ -168,13 +162,9 @@ impl MpcTlsFollower {
     }
 
     pub async fn run(&mut self) -> Result<(), MpcTlsError> {
-        println!("mpc follower start");
         self.run_key_exchange().await?;
-        println!("mpc follower key exchange done");
         self.run_client_finished().await?;
-        println!("mpc follower client finished done");
         self.run_server_finished().await?;
-        println!("mpc follower server finished done");
 
         loop {
             let msg = self.channel.next().await.unwrap()?;
@@ -258,7 +248,6 @@ impl Encrypter {
         seq: u64,
         len: usize,
     ) -> Result<(), MpcTlsError> {
-        println!("mpc follower encrypting: {}", len);
         // Set the transcript id depending on the type of message
         match typ {
             ContentType::ApplicationData => {
@@ -311,7 +300,6 @@ impl Decrypter {
         ciphertext: Vec<u8>,
         seq: u64,
     ) -> Result<(), MpcTlsError> {
-        println!("mpc follower decrypting: {}", ciphertext.len());
         let len = ciphertext.len() - 16;
 
         self.prepare_decrypt(typ, seq, len)?;
