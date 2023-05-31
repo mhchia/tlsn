@@ -14,7 +14,7 @@ async fn test() {
 }
 
 async fn prover<T: AsyncWrite + AsyncRead + Send + Unpin + 'static>(notary_socket: T) {
-    let dns = "tlsnotary.org";
+    let dns = "httpbin.org";
     let server_socket = tokio::net::TcpStream::connect(dns.to_string() + ":443")
         .await
         .unwrap();
@@ -34,38 +34,41 @@ async fn prover<T: AsyncWrite + AsyncRead + Send + Unpin + 'static>(notary_socke
         }
     });
 
-    println!("starting handshake");
-
-    let (mut request_sender, connection) = hyper::client::conn::handshake(server_socket.compat())
-        .await
-        .unwrap();
-
-    println!("handshake done");
-
-    tokio::spawn(async move {
-        if let Err(e) = connection.await {
-            println!("Error in connection: {}", e);
-        }
-    });
+    let (mut request_sender, mut connection) =
+        hyper::client::conn::handshake(server_socket.compat())
+            .await
+            .unwrap();
 
     let request = Request::builder()
-        .header("Host", "tlsnotary.org")
+        .uri("https://httpbin.org/get")
+        .header("Host", "httpbin.org")
         .method("GET")
         .body(Body::from(""))
         .unwrap();
 
     println!("sending request");
 
-    let response = request_sender.send_request(request).await.unwrap();
+    let response = tokio::select! {
+        response = request_sender.send_request(request) => response.unwrap(),
+        _ = &mut connection => panic!("connection closed"),
+    };
 
     println!("request sent");
 
     assert!(response.status() == StatusCode::OK);
 
-    println!(
-        "Response: {:?}",
-        to_bytes(response.into_body()).await.unwrap()
-    );
+    let data = tokio::select! {
+        data = to_bytes(response.into_body()) => data.unwrap(),
+        _ = &mut connection => panic!("connection closed"),
+    };
+
+    println!("Response: {:?}", data);
+
+    let mut server_socket = connection.into_parts().io.into_inner();
+
+    server_socket.close_tls().await.unwrap();
+
+    println!("done");
 }
 
 async fn notary<T: AsyncWrite + AsyncRead + Send + Sync + Unpin + 'static>(socket: T) {
