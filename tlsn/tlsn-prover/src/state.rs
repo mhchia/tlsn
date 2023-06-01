@@ -16,7 +16,7 @@ use mpc_share_conversion::{ConverterSender, Gf2_128};
 use tls_core::{dns::ServerName, handshake::HandshakeData, key::PublicKey};
 use tlsn_core::{SubstringsCommitment, Transcript};
 use uid_mux::{UidYamux, UidYamuxControl};
-use utils_aio::codec::BincodeMux;
+use utils_aio::{codec::BincodeMux, mux::MuxerError};
 
 pub struct Initialized<S, T> {
     pub(crate) server_name: ServerName,
@@ -33,12 +33,12 @@ pub struct Initialized<S, T> {
     pub(crate) transcript_rx: Transcript,
 }
 
-pub struct Notarizing<T> {
-    pub(crate) muxer: UidYamux<T>,
+pub struct Notarizing {
+    pub(crate) muxer_fut:
+        Pin<Box<dyn FusedFuture<Output = Result<(), MuxerError>> + Send + 'static>>,
     pub(crate) mux: BincodeMux<UidYamuxControl>,
 
     pub(crate) vm: DEAPVm<SenderActorControl, ReceiverActorControl>,
-    pub(crate) ot_recv: ReceiverActorControl,
     pub(crate) ot_fut: Pin<Box<dyn FusedFuture<Output = ()> + Send + 'static>>,
     pub(crate) gf2: ConverterSender<Gf2_128, SenderActorControl>,
 
@@ -53,7 +53,7 @@ pub struct Notarizing<T> {
     pub(crate) substring_commitments: Vec<SubstringsCommitment>,
 }
 
-impl<T> std::fmt::Debug for Notarizing<T> {
+impl std::fmt::Debug for Notarizing {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Notarizing")
             .field("transcript_tx", &self.transcript_tx)
@@ -68,12 +68,12 @@ pub struct Finalized {}
 pub trait ProverState: sealed::Sealed {}
 
 impl<S, T> ProverState for Initialized<S, T> {}
-impl<T> ProverState for Notarizing<T> {}
+impl ProverState for Notarizing {}
 impl ProverState for Finalized {}
 
 mod sealed {
     pub trait Sealed {}
     impl<S, T> Sealed for super::Initialized<S, T> {}
-    impl<T> Sealed for super::Notarizing<T> {}
+    impl Sealed for super::Notarizing {}
     impl Sealed for super::Finalized {}
 }

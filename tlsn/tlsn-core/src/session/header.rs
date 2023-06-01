@@ -55,16 +55,29 @@ impl SessionHeader {
         encoder_seed: &[u8; 32],
         handshake_data_decommitment: &Decommitment<HandshakeData>,
     ) -> Result<(), Error> {
-        if self.handshake_summary.time().abs_diff(time) > 300
-            || &self.merkle_root != root
-            || &self.encoder_seed != encoder_seed
-            || handshake_data_decommitment
-                .verify(self.handshake_summary.handshake_commitment())
-                .is_err()
-            || self.handshake_summary.server_public_key() != server_public_key
-        {
+        let ok_time = self.handshake_summary.time().abs_diff(time) <= 300;
+        let ok_root = &self.merkle_root == root;
+        let ok_encoder_seed = &self.encoder_seed == encoder_seed;
+        let ok_handshake_data = handshake_data_decommitment
+            .verify(self.handshake_summary.handshake_commitment())
+            .is_ok();
+        let ok_server_public_key = self.handshake_summary.server_public_key() == server_public_key;
+
+        println!(
+            "ok_time: {}, ok_root: {}, ok_encoder_seed: {}, ok_handshake_data: {}, ok_server_public_key: {}",
+            ok_time, ok_root, ok_encoder_seed, ok_handshake_data, ok_server_public_key
+        );
+
+        println!("server_public_key: {:?}", server_public_key);
+        println!(
+            "self.handshake_summary.server_public_key(): {:?}",
+            self.handshake_summary.server_public_key()
+        );
+
+        if !(ok_time && ok_root && ok_encoder_seed && ok_handshake_data && ok_server_public_key) {
             return Err(Error::WrongSessionHeader);
         }
+
         Ok(())
     }
 

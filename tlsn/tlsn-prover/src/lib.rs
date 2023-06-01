@@ -95,7 +95,7 @@ where
         ))
     }
 
-    pub async fn run(self) -> Result<Prover<Notarizing<T>>, ProverError> {
+    pub async fn run(self) -> Result<Prover<Notarizing>, ProverError> {
         let Initialized {
             server_name,
             server_socket,
@@ -108,7 +108,7 @@ where
             mut transcript_rx,
         } = self.state;
 
-        let mut muxer_fut = Box::pin(muxer.run().fuse());
+        let mut muxer_fut = Box::pin(async move { muxer.run().await }.fuse());
 
         let (mpc_tls, vm, ot_recv, gf2, mut ot_fut) = futures::select! {
             res = &mut muxer_fut => panic!(),
@@ -146,15 +146,12 @@ where
             ).fuse() => res?,
         };
 
-        drop(muxer_fut);
-
         Ok(Prover {
             config: self.config,
             state: Notarizing {
-                muxer,
+                muxer_fut,
                 mux,
                 vm,
-                ot_recv,
                 ot_fut,
                 gf2,
                 start_time,
@@ -169,10 +166,7 @@ where
     }
 }
 
-impl<T> Prover<Notarizing<T>>
-where
-    T: AsyncWrite + AsyncRead + Send + Unpin + 'static,
-{
+impl Prover<Notarizing> {
     pub fn sent_transcript(&self) -> &Transcript {
         &self.state.transcript_tx
     }
@@ -224,10 +218,9 @@ where
 
     pub async fn finalize(self) -> Result<NotarizedSession, ProverError> {
         let Notarizing {
-            mut muxer,
+            mut muxer_fut,
             mut mux,
             mut vm,
-            ot_recv,
             mut ot_fut,
             mut gf2,
             start_time,
@@ -265,7 +258,7 @@ where
 
         let (notary_encoder_seed, SignedSessionHeader { header, signature }) = futures::select! {
             res = ot_fut => panic!(),
-            res = muxer.run().fuse() => panic!(),
+            res = muxer_fut => panic!(),
             res = notarize_fut.fuse() => res?,
         };
 

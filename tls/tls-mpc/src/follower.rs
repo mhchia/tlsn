@@ -82,9 +82,12 @@ impl MpcTlsFollower {
 
     /// Returns the server's public key
     pub fn server_key(&self) -> Option<PublicKey> {
-        self.ke
-            .server_key()
-            .map(|key| PublicKey::new(NamedGroup::secp256r1, key.to_encoded_point(true).as_bytes()))
+        self.ke.server_key().map(|key| {
+            PublicKey::new(
+                NamedGroup::secp256r1,
+                key.to_encoded_point(false).as_bytes(),
+            )
+        })
     }
 
     /// Returns the leader's handshake commitment

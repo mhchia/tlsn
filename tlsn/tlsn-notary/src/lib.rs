@@ -161,6 +161,8 @@ impl Notary {
 
             let mut notarize_channel = mux.get_channel("notarize").await?;
 
+            println!("notary: opened channel");
+
             let merkle_root =
                 expect_msg_or_err!(notarize_channel, TlsnMessage::TranscriptCommitmentRoot)?;
 
@@ -212,13 +214,9 @@ impl Notary {
             Ok::<_, NotaryError>(session_header)
         };
 
-        let session_header = futures::select! {
-            err = muxer_fut => return Err(err.expect_err("muxer runs until connection closes"))?,
-            _ = ot_send_fut.fuse() => return Err(OTShutdownError)?,
-            _ = ot_recv_fut.fuse() => return Err(OTShutdownError)?,
-            res = notarize_fut.fuse() => res?,
-        };
+        let (_, _, _, notarize_res) =
+            futures::join!(muxer_fut, ot_send_fut, ot_recv_fut, notarize_fut);
 
-        Ok(session_header)
+        notarize_res
     }
 }
