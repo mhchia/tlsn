@@ -14,7 +14,7 @@ async fn test() {
 }
 
 async fn prover<T: AsyncWrite + AsyncRead + Send + Unpin + 'static>(notary_socket: T) {
-    let dns = "httpbin.org";
+    let dns = "tlsnotary.org";
     let server_socket = tokio::net::TcpStream::connect(dns.to_string() + ":443")
         .await
         .unwrap();
@@ -28,11 +28,7 @@ async fn prover<T: AsyncWrite + AsyncRead + Send + Unpin + 'static>(notary_socke
     )
     .unwrap();
 
-    tokio::spawn(async move {
-        if let Err(e) = prover.run().await {
-            println!("Error in prover: {}", e);
-        }
-    });
+    let prover_task = tokio::spawn(prover.run());
 
     let (mut request_sender, mut connection) =
         hyper::client::conn::handshake(server_socket.compat())
@@ -40,8 +36,7 @@ async fn prover<T: AsyncWrite + AsyncRead + Send + Unpin + 'static>(notary_socke
             .unwrap();
 
     let request = Request::builder()
-        .uri("https://httpbin.org/get")
-        .header("Host", "httpbin.org")
+        .header("Host", "tlsnotary.org")
         .method("GET")
         .body(Body::from(""))
         .unwrap();
@@ -68,7 +63,21 @@ async fn prover<T: AsyncWrite + AsyncRead + Send + Unpin + 'static>(notary_socke
 
     server_socket.close_tls().await.unwrap();
 
-    println!("done");
+    println!("tls_done");
+
+    let mut prover = prover_task.await.unwrap().unwrap();
+
+    println!("prover task done");
+
+    let sent_len = prover.sent_transcript().data().len();
+    let recv_len = prover.recv_transcript().data().len();
+
+    prover.add_commitment_sent(0..sent_len as u32).unwrap();
+    prover.add_commitment_recv(0..recv_len as u32).unwrap();
+
+    let notarized_session = prover.finalize().await.unwrap();
+
+    println!("notarized!!!");
 }
 
 async fn notary<T: AsyncWrite + AsyncRead + Send + Sync + Unpin + 'static>(socket: T) {

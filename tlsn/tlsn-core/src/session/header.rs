@@ -1,6 +1,8 @@
+use mpc_core::commit::Decommitment;
 use serde::{Deserialize, Serialize};
 
 use mpc_garble_core::ChaChaEncoder;
+use tls_core::{handshake::HandshakeData, key::PublicKey};
 
 use super::SessionArtifacts;
 use crate::{handshake_summary::HandshakeSummary, merkle::MerkleRoot, Error};
@@ -44,16 +46,22 @@ impl SessionHeader {
         }
     }
 
-    /// Check this header against User's artifacts
-    pub fn check_artifacts(&self, artifacts: &SessionArtifacts) -> Result<(), Error> {
-        if self.handshake_summary.time() - artifacts.time() > 300
-            || self.merkle_root != artifacts.merkle_tree().root()
-            || &self.encoder_seed != artifacts.encoder_seed()
-            || artifacts
-                .handshake_data_decommitment()
+    /// Verify the data in the header is consistent with the Prover's view
+    pub fn verify(
+        &self,
+        time: u64,
+        server_public_key: &PublicKey,
+        root: &MerkleRoot,
+        encoder_seed: &[u8; 32],
+        handshake_data_decommitment: &Decommitment<HandshakeData>,
+    ) -> Result<(), Error> {
+        if self.handshake_summary.time().abs_diff(time) > 300
+            || &self.merkle_root != root
+            || &self.encoder_seed != encoder_seed
+            || handshake_data_decommitment
                 .verify(self.handshake_summary.handshake_commitment())
                 .is_err()
-            || self.handshake_summary.server_public_key() != artifacts.ephem_key()
+            || self.handshake_summary.server_public_key() != server_public_key
         {
             return Err(Error::WrongSessionHeader);
         }

@@ -201,9 +201,9 @@ impl MpcTlsFollower {
                             return Err(MpcTlsError::ReceivedFatalAlert);
                         }
 
-                        // if alert.description == AlertDescription::CloseNotify {
-                        //     break;
-                        // }
+                        if alert.description == AlertDescription::CloseNotify {
+                            break;
+                        }
                     }
                     _ => {
                         return Err(MpcTlsError::UnexpectedContentType(typ));
@@ -211,7 +211,6 @@ impl MpcTlsFollower {
                 },
                 MpcTlsMessage::SendCloseNotify(EncryptMessage { typ, seq, len }) => {
                     self.encrypter.encrypt_blind(typ, seq, len).await?;
-                    break;
                 }
                 msg => {
                     return Err(MpcTlsError::UnexpectedMessage(msg));

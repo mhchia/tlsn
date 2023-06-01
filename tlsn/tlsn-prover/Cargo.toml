@@ -9,6 +9,7 @@ tlsn-tls-client.workspace = true
 tlsn-utils-aio.workspace = true
 tlsn-mpc-share-conversion.workspace = true
 tlsn-mpc-garble.workspace = true
+tlsn-mpc-core.workspace = true
 tlsn-core.workspace = true
 tlsn-tls-mpc.workspace = true
 actor-ot.workspace = true

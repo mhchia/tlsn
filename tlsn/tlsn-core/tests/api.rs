@@ -167,7 +167,7 @@ fn test_api() {
     //---------------------------------------
 
     // User verifies the header and stores it with the signature in NotarizedSession
-    header.check_artifacts(&artifacts).unwrap();
+    header.verify(&artifacts).unwrap();
 
     let data = SessionData::new(
         artifacts.handshake_data_decommitment().clone(),

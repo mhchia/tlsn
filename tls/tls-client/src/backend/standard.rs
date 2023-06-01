@@ -11,7 +11,7 @@ use rand::{rngs::OsRng, thread_rng, Rng};
 use digest::Digest;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
-use std::convert::TryInto;
+use std::{any::Any, convert::TryInto};
 use tls_core::{
     cert::ServerCertDetails,
     ke::ServerKxDetails,
@@ -242,6 +242,14 @@ impl RustCryptoBackend {
 
 #[async_trait]
 impl Backend for RustCryptoBackend {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
     async fn set_protocol_version(&mut self, version: ProtocolVersion) -> Result<(), BackendError> {
         match version {
             ProtocolVersion::TLSv1_2 => {

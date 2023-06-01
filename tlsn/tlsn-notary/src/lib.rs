@@ -157,6 +157,8 @@ impl Notary {
 
             mpc_tls.run().await?;
 
+            println!("notary: mpc_tls finished");
+
             let mut notarize_channel = mux.get_channel("notarize").await?;
 
             let merkle_root =
@@ -167,12 +169,15 @@ impl Notary {
                 .reveal()
                 .await
                 .map_err(|e| NotaryError::MpcError(Box::new(e)))?;
+            println!("notary: ot_send revealed");
             vm.finalize()
                 .await
                 .map_err(|e| NotaryError::MpcError(Box::new(e)))?;
+            println!("notary: vm finalized");
             gf2.verify()
                 .await
                 .map_err(|e| NotaryError::MpcError(Box::new(e)))?;
+            println!("notary: gf2 verified");
 
             // Create, sign and send the session header
             let (sent_len, recv_len) = mpc_tls.bytes_transferred();

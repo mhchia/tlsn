@@ -1113,6 +1113,16 @@ impl CommonState {
         self.has_received_close_notify
     }
 
+    /// Returns a reference to the backend.
+    pub fn backend(&self) -> &dyn Backend {
+        self.backend.as_ref()
+    }
+
+    /// Returns a mutable reference to the backend.
+    pub fn backend_mut(&mut self) -> &mut dyn Backend {
+        self.backend.as_mut()
+    }
+
     fn current_io_state(&self) -> IoState {
         IoState {
             tls_bytes_to_write: self.sendable_tls.len(),

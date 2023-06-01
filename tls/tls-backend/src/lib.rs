@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use async_trait::async_trait;
 use tls_core::{
     cert::ServerCertDetails,
@@ -57,6 +59,11 @@ pub enum DecryptMode {
 /// and decryption.
 #[async_trait]
 pub trait Backend: Send {
+    /// Returns reference to `Any` trait object.
+    fn as_any(&self) -> &dyn Any;
+    /// Returns mutable reference to `Any` trait object.
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+
     /// Signals selected protocol version to implementor.
     /// Throws error if version is not supported.
     async fn set_protocol_version(&mut self, version: ProtocolVersion) -> Result<(), BackendError>;

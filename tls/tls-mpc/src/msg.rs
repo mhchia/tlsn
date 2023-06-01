@@ -19,7 +19,11 @@ pub enum MpcTlsMessage {
     EncryptMessage(EncryptMessage),
     DecryptMessage(DecryptMessage),
     SendCloseNotify(EncryptMessage),
+    Close(Close),
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Close;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EncryptMessage {

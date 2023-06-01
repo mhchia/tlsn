@@ -6,17 +6,33 @@ use futures::{
     StreamExt,
 };
 use rand::Rng;
-use std::{io::Read, pin::Pin, sync::Arc};
-use tlsn_tls_mpc::{setup_components, MpcTlsLeader, TlsRole};
+use std::{io::Read, ops::Range, pin::Pin, sync::Arc};
+use tls_core::{handshake::HandshakeData, key::PublicKey};
+use tlsn_tls_mpc::{msg::MpcTlsMessage, setup_components, MpcTlsLeader, TlsRole};
 
 use actor_ot::{create_ot_receiver, create_ot_sender, ReceiverActorControl, SenderActorControl};
-use mpc_garble::{config::Role as GarbleRole, protocol::deap::DEAPVm};
+use mpc_core::{
+    commit::{Decommitment, HashCommit},
+    hash::Hash,
+};
+use mpc_garble::{
+    config::Role as GarbleRole,
+    protocol::deap::{DEAPVm, PeerEncodings},
+};
 use mpc_share_conversion as ff;
 use tls_client::{client::InvalidDnsNameError, Backend, ClientConnection, ServerName};
-use tlsn_core::transcript::Transcript;
+use tlsn_core::{
+    commitment::Blake3,
+    merkle::MerkleTree,
+    msg::{SignedSessionHeader, TlsnMessage},
+    transcript::Transcript,
+    Direction, NotarizedSession, SessionArtifacts, SessionData, SubstringsCommitment,
+    SubstringsCommitmentSet,
+};
 use uid_mux::{yamux, UidYamux, UidYamuxControl};
 use utils_aio::{
     codec::BincodeMux,
+    expect_msg_or_err,
     mux::{MuxChannel, MuxerError},
 };
 
@@ -79,11 +95,11 @@ where
         ))
     }
 
-    pub async fn run(self) -> Result<Prover<Notarizing>, ProverError> {
+    pub async fn run(self) -> Result<Prover<Notarizing<T>>, ProverError> {
         let Initialized {
             server_name,
             server_socket,
-            muxer,
+            mut muxer,
             mux,
             tx_receiver,
             rx_sender,
@@ -92,17 +108,11 @@ where
             mut transcript_rx,
         } = self.state;
 
-        let mut muxer_fut = Box::pin(
-            async move {
-                let mut muxer = muxer;
-                muxer.run().await
-            }
-            .fuse(),
-        );
+        let mut muxer_fut = Box::pin(muxer.run().fuse());
 
         let (mpc_tls, vm, ot_recv, gf2, mut ot_fut) = futures::select! {
             res = &mut muxer_fut => panic!(),
-            res = setup_mpc_backend(&self.config, mux).fuse() => res?,
+            res = setup_mpc_backend(&self.config, mux.clone()).fuse() => res?,
         };
 
         let mut root_store = tls_client::RootCertStore::empty();
@@ -120,7 +130,9 @@ where
         let client =
             ClientConnection::new(Arc::new(config), Box::new(mpc_tls), server_name).unwrap();
 
-        futures::select! {
+        let start_time = std::time::UNIX_EPOCH.elapsed().unwrap().as_secs();
+
+        let (handshake_decommitment, server_public_key) = futures::select! {
             res = &mut muxer_fut => panic!(),
             res = &mut ot_fut => panic!(),
             res = run_client(
@@ -132,19 +144,35 @@ where
                 rx_sender,
                 close_tls_receiver,
             ).fuse() => res?,
-        }
+        };
+
+        drop(muxer_fut);
 
         Ok(Prover {
             config: self.config,
             state: Notarizing {
+                muxer,
+                mux,
+                vm,
+                ot_recv,
+                ot_fut,
+                gf2,
+                start_time,
+                handshake_decommitment,
+                server_public_key,
                 transcript_tx,
                 transcript_rx,
+                commitments: vec![],
+                substring_commitments: vec![],
             },
         })
     }
 }
 
-impl Prover<Notarizing> {
+impl<T> Prover<Notarizing<T>>
+where
+    T: AsyncWrite + AsyncRead + Send + Unpin + 'static,
+{
     pub fn sent_transcript(&self) -> &Transcript {
         &self.state.transcript_tx
     }
@@ -153,8 +181,116 @@ impl Prover<Notarizing> {
         &self.state.transcript_rx
     }
 
-    pub fn send_commitments(&mut self) -> Result<(), ProverError> {
-        todo!()
+    pub fn add_commitment_sent(&mut self, range: Range<u32>) -> Result<(), ProverError> {
+        self.add_commitment(range, Direction::Sent)
+    }
+
+    pub fn add_commitment_recv(&mut self, range: Range<u32>) -> Result<(), ProverError> {
+        self.add_commitment(range, Direction::Received)
+    }
+
+    fn add_commitment(
+        &mut self,
+        range: Range<u32>,
+        direction: Direction,
+    ) -> Result<(), ProverError> {
+        let ids = match direction {
+            Direction::Sent => self.state.transcript_tx.get_ids(&range),
+            Direction::Received => self.state.transcript_rx.get_ids(&range),
+        };
+
+        let id_refs: Vec<_> = ids.iter().map(|id| id.as_str()).collect();
+
+        let encodings = self.state.vm.get_peer_encodings(&id_refs).unwrap();
+
+        let (decommitment, commitment) = encodings.hash_commit();
+
+        self.state.commitments.push(commitment);
+
+        let commitment = Blake3::new(commitment).into();
+
+        let commitment = SubstringsCommitment::new(
+            self.state.substring_commitments.len() as u32,
+            commitment,
+            vec![range],
+            direction,
+            *decommitment.nonce(),
+        );
+
+        self.state.substring_commitments.push(commitment);
+
+        Ok(())
+    }
+
+    pub async fn finalize(self) -> Result<NotarizedSession, ProverError> {
+        let Notarizing {
+            mut muxer,
+            mut mux,
+            mut vm,
+            ot_recv,
+            mut ot_fut,
+            mut gf2,
+            start_time,
+            handshake_decommitment,
+            server_public_key,
+            transcript_tx,
+            transcript_rx,
+            commitments,
+            substring_commitments,
+        } = self.state;
+
+        let merkle_tree = MerkleTree::from_leaves(&commitments).unwrap();
+        let merkle_root = merkle_tree.root();
+
+        let notarize_fut = async move {
+            println!("prover: waiting for notarization channel");
+            let mut channel = mux.get_channel("notarize").await.unwrap();
+
+            println!("prover: channel established");
+
+            channel
+                .send(TlsnMessage::TranscriptCommitmentRoot(merkle_root))
+                .await?;
+
+            println!("prover: sent transcript commitment root");
+
+            let notary_encoder_seed = vm.finalize().await.unwrap().unwrap();
+            gf2.reveal().await.unwrap();
+
+            let signed_header =
+                expect_msg_or_err!(channel, TlsnMessage::SignedSessionHeader).unwrap();
+
+            Ok::<_, ProverError>((notary_encoder_seed, signed_header))
+        };
+
+        let (notary_encoder_seed, SignedSessionHeader { header, signature }) = futures::select! {
+            res = ot_fut => panic!(),
+            res = muxer.run().fuse() => panic!(),
+            res = notarize_fut.fuse() => res?,
+        };
+
+        // Check the header is consistent with the Prover's view
+        header
+            .verify(
+                start_time,
+                &server_public_key,
+                &merkle_tree.root(),
+                &notary_encoder_seed,
+                &handshake_decommitment,
+            )
+            .unwrap();
+
+        let commitments = SubstringsCommitmentSet::new(substring_commitments);
+
+        let data = SessionData::new(
+            handshake_decommitment,
+            transcript_tx,
+            transcript_rx,
+            merkle_tree,
+            commitments,
+        );
+
+        Ok(NotarizedSession::new(header, Some(signature), data))
     }
 }
 
@@ -258,7 +394,7 @@ async fn run_client<T: AsyncWrite + AsyncRead + Unpin>(
     mut tx_receiver: channel::mpsc::Receiver<Bytes>,
     mut rx_sender: channel::mpsc::Sender<Result<Bytes, std::io::Error>>,
     mut close_tls_receiver: channel::oneshot::Receiver<()>,
-) -> Result<(), ProverError> {
+) -> Result<(Decommitment<HandshakeData>, PublicKey), ProverError> {
     client.start().await?;
 
     let (mut server_rx, mut server_tx) = server_socket.split();
@@ -293,6 +429,7 @@ async fn run_client<T: AsyncWrite + AsyncRead + Unpin>(
                 }
 
                 if received == 0 {
+                    println!("Server closed TLS connection");
                     server_closed = true;
                 }
 
@@ -316,6 +453,8 @@ async fn run_client<T: AsyncWrite + AsyncRead + Unpin>(
                 }
                 server_tx.flush().await?;
                 server_tx.close().await?;
+
+                println!("Client closed TLS connection");
             },
         }
 
@@ -357,6 +496,8 @@ async fn run_client<T: AsyncWrite + AsyncRead + Unpin>(
         }
     }
 
+    println!("Client: TLS session complete");
+
     // Extra guard to guarantee that the server sent a close_notify.
     //
     // DO NOT REMOVE!
@@ -368,5 +509,21 @@ async fn run_client<T: AsyncWrite + AsyncRead + Unpin>(
         return Err(ProverError::ServerNoCloseNotify);
     }
 
-    Ok(())
+    let backend = client
+        .backend_mut()
+        .as_any_mut()
+        .downcast_mut::<MpcTlsLeader>()
+        .expect("backend is MpcTlsLeader");
+
+    let server_public_key = backend
+        .server_public_key()
+        .cloned()
+        .expect("server key is set");
+
+    let handshake_decommitment = backend
+        .handshake_decommitment_mut()
+        .take()
+        .expect("handshake data was committed");
+
+    Ok((handshake_decommitment, server_public_key))
 }

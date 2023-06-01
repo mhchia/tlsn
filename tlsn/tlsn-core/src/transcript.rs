@@ -38,12 +38,11 @@ impl Transcript {
     }
 
     /// Returns the encoding ID for each byte in the provided range
-    pub fn get_ids(&self, range: &Range<u32>) -> Vec<EncodingId> {
+    pub fn get_ids(&self, range: &Range<u32>) -> Vec<String> {
         range
             .clone()
-            .map(|idx| EncodingId::new(&format!("{}/{}", self.id, idx)))
+            .map(|idx| format!("{}/{}", self.id, idx))
             .collect::<Vec<_>>()
-            .to_vec()
     }
 
     /// Returns a concatenated bytestring located in the given ranges of the transcript.

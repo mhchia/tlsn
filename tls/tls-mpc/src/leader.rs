@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use async_trait::async_trait;
 use futures::{SinkExt, TryFutureExt};
 
@@ -378,6 +380,14 @@ impl MpcTlsLeader {
 
 #[async_trait]
 impl Backend for MpcTlsLeader {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
     async fn set_protocol_version(&mut self, version: ProtocolVersion) -> Result<(), BackendError> {
         self.set_protocol_version(version);
 
