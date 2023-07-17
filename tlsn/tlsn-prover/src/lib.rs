@@ -74,7 +74,7 @@ pub async fn bind_prover<
         TlsConnection,
         ConnectionFuture<BincodeMux<UidYamuxControl>>,
         MuxFuture,
-    ),
+    ), // (tls_connection, prover_future, notary_future)
     ProverError,
 > {
     let mut mux = UidYamux::new(yamux::Config::default(), notary_socket, yamux::Mode::Client);
@@ -84,11 +84,14 @@ pub async fn bind_prover<
         fut: Box::pin(async move { mux.run().await.map_err(ProverError::from) }),
     };
 
+    // let (conn, conn_fut) = Prover::new(config, mux_control)?.bind_prover(client_socket).await?;
+
     let prover_fut = Prover::new(config, mux_control)?.bind_prover(client_socket);
     let (conn, conn_fut) = futures::select! {
         res = prover_fut.fuse() => res?,
         _ = (&mut mux_fut).fuse() => return Err(std::io::Error::from(std::io::ErrorKind::UnexpectedEof))?,
     };
+    // return Err(std::io::Error::from(std::io::ErrorKind::BrokenPipe))?;
 
     Ok((conn, conn_fut, mux_fut))
 }

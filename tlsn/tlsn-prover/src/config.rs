@@ -4,6 +4,7 @@ use tls_client::RootCertStore;
 use tls_mpc::{MpcTlsCommonConfig, MpcTlsLeaderConfig};
 
 const DEFAULT_MAX_TRANSCRIPT_SIZE: usize = 1 << 14; // 16Kb
+// const DEFAULT_MAX_TRANSCRIPT_SIZE: usize = 1 << 24; // 4 Mb
 
 /// Configuration for the prover
 #[derive(Debug, Clone, derive_builder::Builder)]

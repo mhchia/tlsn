@@ -6,7 +6,7 @@ publish = false
 
 [dev-dependencies]
 tlsn-prover.workspace = true
-tlsn-notary.workspace = true
+tlsn-notary = { workspace = true, features = ["tracing"] }
 tlsn-core.workspace = true
 
 futures.workspace = true
@@ -33,6 +33,17 @@ async-tls = { version = "0.12", default-features = false, features = [
 ] }
 
 serde_json = "1.0"
+
+tungstenite = "0.19.0"
+tokio-tungstenite = "0.19.0"
+futures-util = "0.3.28"
+log = "0.4.19"
+env_logger = "0.8.1"
+ws_stream_tungstenite = {version="0.10.0", features=["tokio_io"]}
+async-tungstenite = {version="^0.22", features = ["tokio-runtime"]}
+asynchronous-codec = "*"
+url = "^2"
+
 
 [[example]]
 name = "twitter_dm"

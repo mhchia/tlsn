@@ -2,25 +2,26 @@ use std::ops::Range;
 
 use hyper::{body::to_bytes, Body, Request, StatusCode};
 
-use futures::AsyncWriteExt;
+use futures::{AsyncWriteExt, TryFutureExt};
 use tlsn_prover::{bind_prover, ProverConfig};
 
 use tokio::io::AsyncWriteExt as _;
 use tokio_util::compat::{FuturesAsyncReadCompatExt, TokioAsyncReadCompatExt};
 
+use
+{
+   ws_stream_tungstenite :: { *                  } ,
+   futures                :: { FutureExt, select, future::{ ok, ready }, StreamExt } ,
+   log                   :: { *                  } ,
+   async_tungstenite     :: { tokio::{ TokioAdapter, connect_async }} ,
+   url                    :: { Url } ,
+};
+
+
 const SERVER_DOMAIN: &str = "twitter.com";
-const ROUTE: &str = "i/api/1.1/dm/conversation";
-const CONVERSATION_ID: &str = "";
 
-const CLIENT_UUID: &str = "";
-const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36";
 
-const AUTH_TOKEN: &str = "";
-const ACCESS_TOKEN: &str = "";
-const CSRF_TOKEN: &str = "";
-
-#[tokio::main]
-async fn main() {
+async fn run() {
     tracing_subscriber::fmt::init();
 
     // Basic default prover config
@@ -31,18 +32,23 @@ async fn main() {
         .unwrap();
 
     // Connect to the Notary
-    let notary_socket = tokio::net::TcpStream::connect(("127.0.0.1", 8080))
-        .await
-        .unwrap();
+	let url    = Url::parse( "ws://127.0.0.1:7788" ).unwrap();
+	let socket = ok( url ).and_then( connect_async ).await.expect( "ws handshake" );
+    // Ref: https://github.com/najamelan/ws_stream_tungstenite/blob/f136412bda74579385d43c91bac8a8030cb527bf/examples/close.rs#L120
+	let notary_socket     = WsStream::new( socket.0 );
 
-    // Connect to the Server
-    let client_socket = tokio::net::TcpStream::connect((SERVER_DOMAIN, 443))
-        .await
-        .unwrap();
+    // Connect to the Server (twitter.com)
+    // let client_socket = tokio::net::TcpStream::connect((SERVER_DOMAIN, 443))
+    //     .await
+    //     .unwrap();
+    let url_app    = Url::parse( "ws://127.0.0.1:55688" ).unwrap();
+	let socket_app = ok( url_app ).and_then( connect_async ).await.expect( "ws handshake" );
+    // Ref: https://github.com/najamelan/ws_stream_tungstenite/blob/f136412bda74579385d43c91bac8a8030cb527bf/examples/close.rs#L120
+	let client_socket     = WsStream::new( socket_app.0 );
 
     // Bind the Prover to the sockets
     let (tls_connection, prover_fut, mux_fut) =
-        bind_prover(config, client_socket.compat(), notary_socket.compat())
+        bind_prover(config, client_socket, notary_socket)
             .await
             .unwrap();
 
@@ -169,4 +175,12 @@ fn find_ranges(seq: &[u8], sub_seq: &[&[u8]]) -> (Vec<Range<u32>>, Vec<Range<u32
     }
 
     (public_ranges, private_ranges)
+}
+
+fn main() {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    rt.block_on(run());
 }
