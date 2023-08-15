@@ -124,7 +124,6 @@ where
             .unwrap();
         println!("!@# notarize: 2");
 
-        // FIXME: stuck here when remote is wasm
         let ((mut ot_send, ot_send_fut), (mut ot_recv, ot_recv_fut)) = futures::try_join!(
             create_ot_sender(mux.clone(), ot_send_config),
             create_ot_receiver(mux.clone(), ot_recv_config)
