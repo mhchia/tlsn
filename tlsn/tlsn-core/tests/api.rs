@@ -1,8 +1,9 @@
 use std::{
     collections::HashMap,
     ops::Range,
-    time::{Duration, UNIX_EPOCH},
 };
+
+use web_time::{Duration, UNIX_EPOCH};
 
 use p256::ecdsa::{
     signature::{SignerMut, Verifier},
