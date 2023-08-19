@@ -1,5 +1,5 @@
 #[cfg(test)]
-use std::time::{Duration, SystemTime};
+use web_time::{Duration, SystemTime};
 
 use rstest::{fixture, rstest};
 use tls_core::{

@@ -28,3 +28,4 @@ ring.workspace = true
 futures.workspace = true
 serde = { workspace = true, optional = true, features = ["derive"] }
 
+web-time.workspace = true

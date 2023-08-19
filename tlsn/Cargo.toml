@@ -47,3 +47,7 @@ hex = "0.4"
 tracing = "0.1"
 tracing-subscriber = "0.3"
 rstest = "0.17"
+
+# std::time for wasm
+# https://github.com/daxpedda/web-time/tree/main
+web-time = "0.2"

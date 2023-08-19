@@ -42,6 +42,7 @@ use tlsn_core::{
 };
 use uid_mux::{yamux, UidYamux, UidYamuxControl};
 use utils_aio::{codec::BincodeMux, expect_msg_or_err, mux::MuxChannelSerde};
+use web_time;
 
 use crate::error::OTShutdownError;
 
@@ -187,10 +188,7 @@ where
         let (conn, conn_fut) = bind_client(socket, client);
         info!("!@# bind_prover: 4");
 
-        // let start_time = std::time::UNIX_EPOCH.elapsed().unwrap().as_secs();
-        // let start_time = Instant::now().duration_since(Instant::UNIX_EPOCH).as_secs();
-        // !@# start_time
-        let start_time = 1692428124;
+        let start_time = web_time::UNIX_EPOCH.elapsed().unwrap().as_secs();
         info!("!@# bind_prover: 5");
 
         let fut = Box::pin({
