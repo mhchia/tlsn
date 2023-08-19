@@ -18,9 +18,9 @@ tracing = ["dep:tracing"]
 tlsn-tls-core = { path = "../tls-core", features = ["serde"] }
 tlsn-tls-backend = { path = "../tls-backend" }
 
-mpz-core = { git = "https://github.com/tlsnotary/mpz", rev = "86f1687" }
-mpz-garble = { git = "https://github.com/tlsnotary/mpz", rev = "86f1687" }
-mpz-share-conversion = { git = "https://github.com/tlsnotary/mpz", rev = "86f1687" }
+mpz-core = { git = "https://github.com/mhchia/mpz" }
+mpz-garble = { git = "https://github.com/mhchia/mpz" }
+mpz-share-conversion = { git = "https://github.com/mhchia/mpz" }
 
 tlsn-block-cipher = { path = "../../cipher/block-cipher" }
 tlsn-stream-cipher = { path = "../../cipher/stream-cipher" }
@@ -30,7 +30,7 @@ tlsn-key-exchange = { path = "../../key-exchange" }
 tlsn-point-addition = { path = "../../point-addition" }
 tlsn-hmac-sha256 = { path = "../../prf/hmac-sha256" }
 
-tlsn-utils-aio = { git = "https://github.com/tlsnotary/tlsn-utils" }
+tlsn-utils-aio = { git = "https://github.com/mhchia/tlsn-utils" }
 
 p256.workspace = true
 rand.workspace = true

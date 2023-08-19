@@ -15,14 +15,17 @@ tls-server-fixture = { path = "../components/tls/tls-server-fixture" }
 actor-ot = { path = "../components/actors/actor-ot" }
 uid-mux = { path = "../components/uid-mux" }
 
-tlsn-utils = { git = "https://github.com/tlsnotary/tlsn-utils" }
-tlsn-utils-aio = { git = "https://github.com/tlsnotary/tlsn-utils" }
-
-mpz-core = { git = "https://github.com/tlsnotary/mpz", rev = "86f1687" }
-mpz-circuits = { git = "https://github.com/tlsnotary/mpz", rev = "86f1687" }
-mpz-garble-core = { git = "https://github.com/tlsnotary/mpz", rev = "86f1687" }
-mpz-garble = { git = "https://github.com/tlsnotary/mpz", rev = "86f1687" }
-mpz-share-conversion = { git = "https://github.com/tlsnotary/mpz", rev = "86f1687" }
+tlsn-utils = { git = "https://github.com/mhchia/tlsn-utils" }
+tlsn-utils-aio = { git = "https://github.com/mhchia/tlsn-utils" }
+# tlsn-utils = { path = "../../tlsn-utils" }
+# tlsn-utils-aio = { path = "../../tlsn-utils" }
+# tlsn-utils = { git = "https://github.com/mhchia/tlsn-utils" }
+# tlsn-utils-aio = { git = "https://github.com/mhchia/tlsn-utils" }
+mpz-core = { git = "https://github.com/mhchia/mpz" }
+mpz-circuits = { git = "https://github.com/mhchia/mpz" }
+mpz-garble-core = { git = "https://github.com/mhchia/mpz" }
+mpz-garble = { git = "https://github.com/mhchia/mpz" }
+mpz-share-conversion = { git = "https://github.com/mhchia/mpz" }
 
 
 futures = "0.3"
