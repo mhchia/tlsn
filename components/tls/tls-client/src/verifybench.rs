@@ -7,8 +7,9 @@
 use crate::{anchors, verify, verify::ServerCertVerifier, OwnedTrustAnchor};
 use std::{
     convert::TryInto,
-    time::{Duration, Instant, SystemTime},
 };
+use web_time::{Duration, Instant, SystemTime};
+
 use webpki_roots;
 
 fn duration_nanos(d: Duration) -> u64 {
