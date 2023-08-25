@@ -1,5 +1,7 @@
 use std::env;
+use std::time::Instant;
 
+use futures_util::{AsyncReadExt, AsyncWriteExt};
 // use tokio::net::TcpListener;
 use tokio_util::compat::TokioAsyncReadCompatExt;
 use
@@ -13,6 +15,7 @@ use
  };
 
 use tlsn_notary::{bind_notary, NotaryConfig};
+// use futures_util::AsyncWriteExt;
 
 #[tokio::main]
 async fn main() {
@@ -41,15 +44,25 @@ async fn main() {
 
         println!("Accepted connection from: {}", peer_addr);
 
+        let start = Instant::now();
 
         let s   = accept_async( TokioAdapter::new(tcp_stream) ).await.expect( "ws handshake" );
-        let ws = WsStream::new( s );
+        let mut ws = WsStream::new( s );
 
         {
             let signing_key = signing_key.clone();
 
             // Spawn notarization task to be run concurrently
             tokio::spawn(async move {
+
+                // let mut output = [0u8; 20];
+                // let bytes = ws.read(&mut output[..]).await.unwrap();
+                // assert_eq!(bytes, 18);
+                // println!("Received: {:?}", &output[..bytes]);
+
+                // let message         = b"Hello from browser".to_vec();
+                // ws.write(&message).await.unwrap();
+
                 // Setup default notary config. Normally a different ID would be generated
                 // for each notarization.
                 let config = NotaryConfig::builder().id("example").build().unwrap();
@@ -63,6 +76,10 @@ async fn main() {
                     notary.notarize::<p256::ecdsa::Signature>(&signing_key)
                 )
                 .unwrap();
+
+                let duration = start.elapsed();
+
+                println!("!@# request costs: {} seconds", duration.as_secs());
             });
         }
     }

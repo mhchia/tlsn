@@ -734,6 +734,8 @@ impl State<ClientConnectionData> for ExpectServerDone {
         trace!("Server cert is {:?}", st.server_cert.cert_chain());
         debug!("Server DNS name is {:?}", st.server_name);
 
+        debug!("!@# ExpectServerDone.handle: 0");
+
         let suite = st.suite;
 
         // 1. Verify the cert chain.
@@ -773,6 +775,8 @@ impl State<ClientConnectionData> for ExpectServerDone {
             Err(e) => return Err(hs::send_cert_error_alert(cx.common, Error::CoreError(e)).await?),
         };
 
+        debug!("!@# ExpectServerDone.handle: 1");
+
         // 3.
         // Build up the contents of the signed message.
         // It's ClientHello.random || ServerHello.random || ServerKeyExchange.params
@@ -805,7 +809,9 @@ impl State<ClientConnectionData> for ExpectServerDone {
                 }
             }
         };
+        debug!("!@# ExpectServerDone.handle: 3");
         cx.common.peer_certificates = Some(st.server_cert.cert_chain().to_vec());
+        debug!("!@# ExpectServerDone.handle: 4");
 
         // 4.
         if let Some(client_auth) = &st.client_auth {
@@ -815,6 +821,7 @@ impl State<ClientConnectionData> for ExpectServerDone {
             };
             emit_certificate(&mut st.transcript, certs, cx.common).await?;
         }
+        debug!("!@# ExpectServerDone.handle: 5");
 
         // 5a.
         let ecdh_params =
@@ -828,16 +835,21 @@ impl State<ClientConnectionData> for ExpectServerDone {
                 }
             };
 
+        debug!("!@# ExpectServerDone.handle: 6");
+
         let key_share = cx.common.backend.get_client_key_share().await?;
+        debug!("!@# ExpectServerDone.handle: 7");
         if key_share.group != ecdh_params.curve_params.named_group {
             return Err(Error::PeerMisbehavedError(
                 "peer chose an unsupported group".to_string(),
             ));
         }
+        debug!("!@# ExpectServerDone.handle: 8");
 
         // 5b.
         let mut transcript = st.transcript;
         emit_clientkx(&mut transcript, cx.common, &key_share).await?;
+        debug!("!@# ExpectServerDone.handle: 9");
         // nb. EMS handshake hash only runs up to ClientKeyExchange.
         let ems_seed = transcript.get_current_hash();
 
@@ -846,13 +858,17 @@ impl State<ClientConnectionData> for ExpectServerDone {
             .set_hs_hash_client_key_exchange(ems_seed.as_ref())
             .await?;
 
+        debug!("!@# ExpectServerDone.handle: 10");
         // 5c.
         if let Some(ClientAuthDetails::Verify { signer, .. }) = &st.client_auth {
+            debug!("!@# ExpectServerDone.handle: 11");
             emit_certverify(&mut transcript, signer.as_ref(), cx.common).await?;
         }
 
+        debug!("!@# ExpectServerDone.handle: 12");
         // 5d.
         emit_ccs(cx.common).await?;
+        debug!("!@# ExpectServerDone.handle: 13");
 
         // 5e. Now commit secrets.
         let server_key_share =
@@ -863,7 +879,9 @@ impl State<ClientConnectionData> for ExpectServerDone {
             .backend
             .set_server_key_share(server_key_share)
             .await?;
+        debug!("!@# ExpectServerDone.handle: 14");
         cx.common.backend.prepare_encryption().await?;
+        debug!("!@# ExpectServerDone.handle: 15");
         cx.common.record_layer.prepare_message_encrypter();
         cx.common.record_layer.prepare_message_decrypter();
         cx.common.record_layer.start_encrypting();
@@ -872,6 +890,7 @@ impl State<ClientConnectionData> for ExpectServerDone {
             .key_log
             .log("CLIENT_RANDOM", &st.randoms.client, &[]);
 
+        debug!("!@# ExpectServerDone.handle: 16");
         // 6.
         let hs = transcript.get_current_hash();
         let cf = cx
@@ -879,7 +898,9 @@ impl State<ClientConnectionData> for ExpectServerDone {
             .backend
             .get_client_finished_vd(hs.as_ref())
             .await?;
+        debug!("!@# ExpectServerDone.handle: 17");
         emit_finished(&cf, &mut transcript, cx.common).await?;
+        debug!("!@# ExpectServerDone.handle: 18");
 
         if st.must_issue_new_ticket {
             Ok(Box::new(ExpectNewTicket {

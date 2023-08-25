@@ -44,7 +44,6 @@ async-tungstenite = {version="^0.22", features = ["tokio-runtime"]}
 asynchronous-codec = "*"
 url = "^2"
 
-
 [[example]]
 name = "twitter_dm"
 path = "twitter_dm.rs"
