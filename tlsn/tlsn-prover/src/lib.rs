@@ -74,7 +74,7 @@ pub async fn bind_prover<
         TlsConnection,
         ConnectionFuture<BincodeMux<UidYamuxControl>>,
         MuxFuture,
-    ), // (tls_connection, prover_future, notary_future)
+    ),
     ProverError,
 > {
     let mut mux = UidYamux::new(yamux::Config::default(), notary_socket, yamux::Mode::Client);
@@ -397,44 +397,28 @@ async fn setup_mpc_backend<M: MuxChannelSerde + Clone + Send + 'static>(
     ProverError,
 > {
     #[cfg(feature = "tracing")]
-    debug!("!@# setup_mpc_backend: 0");
-
-    #[cfg(feature = "tracing")]
     let (create_ot_sender, create_ot_receiver) = {
         debug!("Starting OT setup");
-        let res = (
+        (
             |mux: M, config| create_ot_sender(mux, config).in_current_span(),
             |mux: M, config| create_ot_receiver(mux, config).in_current_span(),
-        );
-
-        debug!("!@# setup_mpc_backend: 1");
-        res
+        )
     };
-
-    #[cfg(feature = "tracing")]
-    debug!("!@# setup_mpc_backend: 2");
 
     let ((mut ot_send, ot_send_fut), (mut ot_recv, ot_recv_fut)) = futures::try_join!(
         create_ot_sender(mux.clone(), config.build_ot_sender_config()),
         create_ot_receiver(mux.clone(), config.build_ot_receiver_config())
     )
     .map_err(|e| ProverError::MpcError(Box::new(e)))?;
-    #[cfg(feature = "tracing")]
-    debug!("!@# setup_mpc_backend: 3");
 
     // Join the OT background futures so they can be polled together
-    // FIXME: stuck here
     let mut ot_fut = Box::pin(join(ot_send_fut, ot_recv_fut).map(|_| ()).fuse());
-    #[cfg(feature = "tracing")]
-    debug!("!@# setup_mpc_backend: 4");
 
     futures::select! {
         _ = &mut ot_fut => return Err(OTShutdownError)?,
         res = try_join(ot_send.setup(), ot_recv.setup()).fuse() =>
             _ = res.map_err(|e| ProverError::MpcError(Box::new(e)))?,
     }
-    #[cfg(feature = "tracing")]
-    debug!("!@# setup_mpc_backend: 5");
 
     #[cfg(feature = "tracing")]
     debug!("OT setup complete");

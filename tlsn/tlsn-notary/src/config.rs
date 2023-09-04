@@ -1,5 +1,4 @@
 const DEFAULT_MAX_TRANSCRIPT_SIZE: usize = 1 << 14; // 16Kb
-// const DEFAULT_MAX_TRANSCRIPT_SIZE: usize = 1 << 24; // 4 Mb
 
 /// Configuration for the [`Notary`](crate::Notary)
 #[allow(missing_docs)]
