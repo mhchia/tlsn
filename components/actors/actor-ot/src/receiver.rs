@@ -13,6 +13,7 @@ use mpz_ot_core::{
 use std::{collections::HashMap, pin::Pin};
 use utils_aio::mux::MuxChannel;
 use xtra::{prelude::*, scoped};
+use tracing::info;
 
 #[allow(clippy::large_enum_variant)]
 enum State {
@@ -57,7 +58,9 @@ impl KOSReceiverActor {
         channel: OTChannel,
         mux_control: Box<dyn MuxChannel<OTMessage> + Send>,
     ) -> (Self, impl Future<Output = ()>) {
+        info!("!@# KOSReceiverActor.new: 0");
         let (sink, mut stream) = channel.split();
+        info!("!@# KOSReceiverActor.new: 1");
         let (sender, receiver) = oneshot::channel();
         (
             Self {
@@ -69,16 +72,20 @@ impl KOSReceiverActor {
                 pending_buffer: HashMap::default(),
             },
             scoped(&addr.clone(), async move {
+                info!("!@# KOSReceiverActor.new: 2");
                 // wait for actor to signal that it is set up before we start
                 // processing these messages
                 _ = receiver.await;
+                info!("!@# KOSReceiverActor.new: 3");
                 while let Some(msg) = stream.next().await {
+                    info!("!@# KOSReceiverActor.new: 4");
                     match msg {
                         Ok(OTMessage::Split(msg)) => {
                             // Forward message to actor, ignore result.
                             _ = addr.send(msg).await
                         }
                         _ => {
+                            info!("!@# KOSReceiverActor.new: 7");
                             // Shutdown if we receive any unexpected message
                             break;
                         }
@@ -313,6 +320,7 @@ impl Clone for ReceiverActorControl {
 impl ReceiverActorControl {
     /// Creates a new ReceiverActorControl
     pub fn new(address: Address<KOSReceiverActor>) -> Self {
+        info!("!@# ReceiverActorControl.new: 0");
         Self(address)
     }
 
@@ -323,10 +331,22 @@ impl ReceiverActorControl {
 
     /// Sends Setup message to actor
     pub async fn setup(&mut self) -> Result<(), OTError> {
-        self.0
-            .send(Setup)
-            .await
-            .map_err(|e| OTError::Other(e.to_string()))?
+        info!("!@# ReceiverActorControl.setup: 0");
+
+        let result = self.0.send(Setup).await;
+
+        match result {
+            Ok(inner_result) => {
+                inner_result.map_err(|e| {
+                    info!("!@# Error in processing Setup: {}", e.to_string());
+                    OTError::Other(e.to_string())
+                })
+            }
+            Err(e) => {
+                info!("!@# Error in sending Setup: {}", e.to_string());
+                Err(OTError::Other(e.to_string()))
+            }
+        }
     }
 }
 

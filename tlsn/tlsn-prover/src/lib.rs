@@ -60,10 +60,10 @@ use tracing::{debug, debug_span, instrument, Instrument};
 /// * `client_socket` - The socket to the server.
 /// * `notary_socket` - The socket to the notary.
 #[allow(clippy::type_complexity)]
-#[cfg_attr(
-    feature = "tracing",
-    instrument(level = "info", skip(client_socket, notary_socket), err)
-)]
+// #[cfg_attr(
+//     feature = "tracing",
+//     instrument(level = "info", skip(client_socket, notary_socket), err)
+// )]
 pub async fn bind_prover<
     S: AsyncWrite + AsyncRead + Send + Unpin + 'static,
     T: AsyncWrite + AsyncRead + Send + Unpin + 'static,
@@ -79,18 +79,41 @@ pub async fn bind_prover<
     ), // (tls_connection, prover_future, notary_future)
     ProverError,
 > {
+    info!("!@# bind_prover: 0");
     let mut mux = UidYamux::new(yamux::Config::default(), notary_socket, yamux::Mode::Client);
+    info!("!@# bind_prover: 1");
     let mux_control = BincodeMux::new(mux.control());
+    info!("!@# bind_prover: 2");
 
     let mut mux_fut = MuxFuture {
         fut: Box::pin(async move { mux.run().await.map_err(ProverError::from) }),
     };
+    info!("!@# bind_prover: 3");
 
     let prover_fut = Prover::new(config, mux_control)?.bind_prover(client_socket);
+    info!("!@# bind_prover: 4");
     let (conn, conn_fut) = futures::select! {
-        res = prover_fut.fuse() => res?,
-        _ = (&mut mux_fut).fuse() => return Err(std::io::Error::from(std::io::ErrorKind::UnexpectedEof))?,
+        res = prover_fut.fuse() => match res {
+            Ok(result) => result,
+            Err(e) => {
+                info!("!@# Error in prover_fut: {:?}", e);
+                return Err(e.into());
+            }
+        },
+        // mux_fut is fused, so this branch is only taken if the mux_fut is done
+        res2 = (&mut mux_fut).fuse() => match res2 {
+            Ok(_) => {
+                info!("!@# mux_fut completed without error");
+                return Err(std::io::Error::from(std::io::ErrorKind::UnexpectedEof).into());
+            },
+            Err(e) => {
+                info!("!@# Error in mux_fut: {:?}", e);
+                return Err(e.into());
+            }
+        }
     };
+
+    info!("!@# bind_prover: 5");
 
     Ok((conn, conn_fut, mux_fut))
 }
@@ -158,10 +181,10 @@ where
     }
 
     /// Binds the prover to the provided socket.
-    #[cfg_attr(
-        feature = "tracing",
-        instrument(level = "debug", skip(self, socket), err)
-    )]
+    // #[cfg_attr(
+    //     feature = "tracing",
+    //     instrument(level = "debug", skip(self, socket), err)
+    // )]
     pub async fn bind_prover<S: AsyncWrite + AsyncRead + Send + Unpin + 'static>(
         self,
         socket: S,
@@ -171,43 +194,43 @@ where
             notary_mux: mux,
         } = self.state;
 
-        info!("!@# bind_prover: 0");
+        info!("!@# Prover.bind_prover: 0");
         let (mpc_tls, vm, _, gf2, mut ot_fut) =
             setup_mpc_backend(&self.config, mux.clone()).await?;
-        info!("!@# bind_prover: 1");
+        info!("!@# Prover.bind_prover: 1");
 
         let config = tls_client::ClientConfig::builder()
             .with_safe_defaults()
             .with_root_certificates(self.config.root_cert_store.clone())
             .with_no_client_auth();
-        info!("!@# bind_prover: 2");
+        info!("!@# Prover.bind_prover: 2");
 
         let client = ClientConnection::new(Arc::new(config), Box::new(mpc_tls), server_name)?;
-        info!("!@# bind_prover: 3");
+        info!("!@# Prover.bind_prover: 3");
 
         let (conn, conn_fut) = bind_client(socket, client);
-        info!("!@# bind_prover: 4");
+        info!("!@# Prover.bind_prover: 4");
 
         let start_time = web_time::UNIX_EPOCH.elapsed().unwrap().as_secs();
-        info!("!@# bind_prover: 5");
+        info!("!@# Prover.bind_prover: 5");
 
         let fut = Box::pin({
-            info!("!@# bind_prover: 6");
+            info!("!@# Prover.bind_prover: 6");
             #[allow(clippy::let_and_return)]
             let fut = async move {
-                info!("!@# bind_prover: 7");
+                info!("!@# Prover.bind_prover: 7");
                 let ClosedConnection {
                     mut client,
                     sent,
                     recv,
                 } = futures::select! {
                     res = conn_fut.fuse() => {
-                        info!("!@# bind_prover: 5");
+                        info!("!@# Prover.bind_prover: 5");
                         res.unwrap()
                     },
                     _ = ot_fut => return Err(OTShutdownError)?,
                 };
-                info!("!@# bind_prover: 8");
+                info!("!@# Prover.bind_prover: 8");
 
                 // Extra guard to guarantee that the server sent a close_notify.
                 //
@@ -217,28 +240,28 @@ where
                 // which could be used to authenticate modified TLS records if the Notary is
                 // in the middle of the connection.
                 if !client.received_close_notify() {
-                    info!("!@# bind_prover: 9");
+                    info!("!@# Prover.bind_prover: 9");
                     return Err(ProverError::ServerNoCloseNotify);
                 }
-                info!("!@# bind_prover: 10");
+                info!("!@# Prover.bind_prover: 10");
 
                 let backend = client
                     .backend_mut()
                     .as_any_mut()
                     .downcast_mut::<MpcTlsLeader>()
                     .unwrap();
-                info!("!@# bind_prover: 11");
+                info!("!@# Prover.bind_prover: 11");
 
                 let handshake_decommitment = backend
                     .handshake_decommitment_mut()
                     .take()
                     .expect("handshake decommitment is set");
-                info!("!@# bind_prover: 12");
+                info!("!@# Prover.bind_prover: 12");
                 let server_public_key = backend
                     .server_public_key()
                     .cloned()
                     .expect("server public key is set");
-                info!("!@# bind_prover: 13");
+                info!("!@# Prover.bind_prover: 13");
 
                 Ok(Prover {
                     config: self.config,
@@ -257,10 +280,10 @@ where
                     },
                 })
             };
-            info!("!@# bind_prover: 14");
+            info!("!@# Prover.bind_prover: 14");
             #[cfg(feature = "tracing")]
             let fut = fut.instrument(debug_span!("prover_tls_connection"));
-            info!("!@# bind_prover: 15");
+            info!("!@# Prover.bind_prover: 15");
             fut
         });
 
@@ -403,7 +426,7 @@ where
     }
 }
 
-#[cfg_attr(feature = "tracing", instrument(level = "debug", skip(mux), err))]
+// #[cfg_attr(feature = "tracing", instrument(level = "debug", skip(mux), err))]
 #[allow(clippy::type_complexity)]
 async fn setup_mpc_backend<M: MuxChannelSerde + Clone + Send + 'static>(
     config: &ProverConfig,

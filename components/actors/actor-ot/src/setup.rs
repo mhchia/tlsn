@@ -5,6 +5,8 @@ use mpz_ot_core::msgs::OTMessage;
 use utils_aio::mux::MuxChannel;
 use xtra::Mailbox;
 
+use tracing::info;
+
 use crate::{
     KOSReceiverActor, KOSSenderActor, OTActorError, OTActorReceiverConfig, OTActorSenderConfig,
     ReceiverActorControl, SenderActorControl,
@@ -22,11 +24,16 @@ pub async fn create_ot_sender(
     mut mux: impl MuxChannel<OTMessage> + Send + 'static,
     config: OTActorSenderConfig,
 ) -> Result<(SenderActorControl, impl Future<Output = ()>), OTActorError> {
+    info!("!@# create_ot_sender: 0");
     let channel = mux.get_channel(config.id()).await?;
+    info!("!@# create_ot_sender: 1");
     let (addr, mailbox) = Mailbox::unbounded();
+    info!("!@# create_ot_sender: 2");
     let (actor, fut) = KOSSenderActor::new(config, addr.clone(), channel, Box::new(mux));
+    info!("!@# create_ot_sender: 3");
 
     let fut = futures::future::join(fut, xtra::run(mailbox, actor)).map(|_| ());
+    info!("!@# create_ot_sender: 4");
 
     Ok((SenderActorControl::new(addr), fut))
 }
@@ -43,11 +50,16 @@ pub async fn create_ot_receiver(
     mut mux: impl MuxChannel<OTMessage> + Send + 'static,
     config: OTActorReceiverConfig,
 ) -> Result<(ReceiverActorControl, impl Future<Output = ()>), OTActorError> {
+    info!("!@# create_ot_receiver: 0");
     let channel = mux.get_channel(config.id()).await?;
+    info!("!@# create_ot_receiver: 1");
     let (addr, mailbox) = Mailbox::unbounded();
+    info!("!@# create_ot_receiver: 2");
     let (actor, fut) = KOSReceiverActor::new(config, addr.clone(), channel, Box::new(mux));
+    info!("!@# create_ot_receiver: 3");
 
     let fut = futures::future::join(fut, xtra::run(mailbox, actor)).map(|_| ());
+    info!("!@# create_ot_receiver: 4");
 
     Ok((ReceiverActorControl::new(addr), fut))
 }
@@ -73,9 +85,13 @@ pub async fn create_ot_pair(
     ),
     OTActorError,
 > {
+    info!("!@# create_ot_pair: 0");
     assert_eq!(sender_config.id(), receiver_config.id());
-    futures::try_join!(
+    info!("!@# create_ot_pair: 1");
+    let res = futures::try_join!(
         create_ot_sender(sender_mux, sender_config),
         create_ot_receiver(receiver_mux, receiver_config)
-    )
+    );
+    info!("!@# create_ot_pair: 2");
+    res
 }

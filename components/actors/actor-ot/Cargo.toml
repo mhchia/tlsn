@@ -17,6 +17,7 @@ thiserror = "1"
 xtra = { git = "https://github.com/Restioson/xtra", rev = "ca061b4", features = [
     "macros",
 ], default-features = false }
+tracing = "0.1"
 
 [features]
 default = ["mock"]

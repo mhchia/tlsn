@@ -16,6 +16,7 @@ use mpz_ot_core::{
 use std::collections::HashMap;
 use utils_aio::mux::MuxChannel;
 use xtra::{prelude::*, scoped};
+use tracing::info;
 
 #[allow(clippy::large_enum_variant)]
 enum State {
@@ -53,7 +54,9 @@ impl KOSSenderActor {
         channel: OTChannel,
         mux_control: Box<dyn MuxChannel<OTMessage> + Send>,
     ) -> (Self, impl Future<Output = ()>) {
+        info!("!@# KOSSenderActor::new: 0");
         let (sink, mut stream) = channel.split();
+        info!("!@# KOSSenderActor::new: 1");
 
         (
             Self {
@@ -63,12 +66,15 @@ impl KOSSenderActor {
                 state: State::Initialized,
             },
             scoped(&addr, async move {
+                info!("!@# KOSSenderActor::new: 2");
                 // This loop currently serves no functional purpose. We may want to use
                 // this channel in the future.
                 while stream.next().await.is_some() {
+                    info!("!@# KOSSenderActor::new: 3");
                     // Receiver should not send messages, we just discard.
                     continue;
                 }
+                info!("!@# KOSSenderActor::new: 4");
             })
             .map(|_| ()),
         )
@@ -244,6 +250,7 @@ impl SenderActorControl {
 
     /// Sends Setup message to actor
     pub async fn setup(&mut self) -> Result<(), OTError> {
+        info!("!@# SenderActorControl.setup: 0");
         self.0
             .send(Setup)
             .await
