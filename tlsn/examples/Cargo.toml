@@ -45,6 +45,16 @@ rustls-pemfile = { version = "1.0.2" }
 tokio-rustls = { version = "0.24.1" }
 dotenv = "0.15.0"
 
+tungstenite = "0.19.0"
+tokio-tungstenite = "0.19.0"
+futures-util = "0.3.28"
+log = "0.4.19"
+env_logger = "0.8.1"
+ws_stream_tungstenite = {version="0.10.0", features=["tokio_io"]}
+async-tungstenite = {version="^0.22", features = ["tokio-runtime"]}
+asynchronous-codec = "*"
+url = "^2"
+
 [[example]]
 name = "simple_prover"
 path = "simple_prover.rs"

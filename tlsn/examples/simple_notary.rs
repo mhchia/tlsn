@@ -1,11 +1,23 @@
 /// This is a simple implementation of the notary server with minimal functionalities (without TLS, does not support WebSocket and configuration etc.)
 /// For a more functional notary server implementation, please use https://github.com/tlsnotary/notary-server
 use std::env;
+use std::time::Instant;
 
 use tokio::net::TcpListener;
 use tokio_util::compat::TokioAsyncReadCompatExt;
 
 use tlsn_notary::{bind_notary, NotaryConfig};
+
+use futures_util::{AsyncReadExt, AsyncWriteExt};
+use
+{
+   ws_stream_tungstenite :: { *                  } ,
+   futures               :: { StreamExt          } ,
+   log                   :: { *                  } ,
+   tokio                 :: { net::{ TcpStream }           } ,
+   async_tungstenite     :: { accept_async, tokio::{ TokioAdapter }} ,
+   asynchronous_codec    :: { LinesCodec, Framed } ,
+ };
 
 #[tokio::main]
 async fn main() {
@@ -16,7 +28,7 @@ async fn main() {
     // 127.0.0.1:8080 for connections.
     let addr = env::args()
         .nth(1)
-        .unwrap_or_else(|| "127.0.0.1:8080".to_string());
+        .unwrap_or_else(|| "127.0.0.1:7788".to_string());
 
     // Next up we create a TCP listener which will listen for incoming
     // connections. This TCP listener is bound to the address we determined
@@ -34,6 +46,11 @@ async fn main() {
 
         println!("Accepted connection from: {}", socket_addr);
 
+        let start = Instant::now();
+
+        let s   = accept_async( TokioAdapter::new(socket) ).await.expect( "ws handshake" );
+        let mut ws = WsStream::new( s );
+
         {
             let signing_key = signing_key.clone();
 
@@ -44,7 +61,7 @@ async fn main() {
                 let config = NotaryConfig::builder().id("example").build().unwrap();
 
                 // Bind the notary to the socket
-                let (notary, notary_fut) = bind_notary(config, socket.compat()).unwrap();
+                let (notary, notary_fut) = bind_notary(config, ws).unwrap();
 
                 // Run the notary
                 tokio::try_join!(
@@ -52,6 +69,10 @@ async fn main() {
                     notary.notarize::<p256::ecdsa::Signature>(&signing_key)
                 )
                 .unwrap();
+
+                let duration = start.elapsed();
+
+                println!("!@# request costs: {} seconds", duration.as_secs());
             });
         }
     }
