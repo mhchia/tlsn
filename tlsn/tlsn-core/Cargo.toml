@@ -32,6 +32,8 @@ opaque-debug.workspace = true
 
 bimap = { version = "0.6.3", features = ["serde"] }
 
+web-time.workspace = true
+
 [dev-dependencies]
 tlsn-fixtures.workspace = true
 

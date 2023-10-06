@@ -1,5 +1,6 @@
 use crate::{backend::BackendError, rand};
-use std::{error::Error as StdError, fmt, time::SystemTimeError};
+use std::{error::Error as StdError, fmt};
+use web_time::SystemTimeError;
 use tls_core::{
     msgs::enums::{AlertDescription, ContentType, HandshakeType},
     Error as CoreError,
@@ -259,7 +260,7 @@ mod tests {
 
     #[test]
     fn time_error_mapping() {
-        use std::time::SystemTime;
+        use web_time::SystemTime;
 
         let time_error = SystemTime::UNIX_EPOCH
             .duration_since(SystemTime::now())
