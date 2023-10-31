@@ -16,6 +16,7 @@ use ff::ShareConversionReveal;
 use futures::{
     future::FusedFuture, AsyncRead, AsyncWrite, Future, FutureExt, SinkExt, StreamExt, TryFutureExt,
 };
+use instant::SystemTime;
 use rand::Rng;
 use std::{pin::Pin, sync::Arc};
 use tls_client_async::{bind_client, ClosedConnection, TlsConnection};
@@ -157,7 +158,10 @@ impl Prover<state::Setup> {
 
         let (conn, conn_fut) = bind_client(socket, client);
 
-        let start_time = std::time::UNIX_EPOCH.elapsed().unwrap().as_secs();
+        let start_time = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
 
         let fut = Box::pin({
             #[allow(clippy::let_and_return)]

@@ -1,4 +1,4 @@
-use std::time::SystemTime;
+use instant::SystemTime;
 
 use crate::{
     cert::ServerCertDetails, dns::ServerName, ke::ServerKxDetails, msgs::handshake::Random,

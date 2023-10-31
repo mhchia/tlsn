@@ -1,4 +1,4 @@
-use std::time::{Duration, UNIX_EPOCH};
+use instant::{Duration, SystemTime};
 
 use serde::{Deserialize, Serialize};
 
@@ -94,7 +94,8 @@ impl SessionProof {
             .data()
             .verify(
                 cert_verifier,
-                UNIX_EPOCH + Duration::from_secs(self.header.handshake_summary().time()),
+                SystemTime::UNIX_EPOCH
+                    + Duration::from_secs(self.header.handshake_summary().time()),
                 &server_name,
             )
             .map_err(|e| SessionProofError::InvalidServerCertificate(e.to_string()))?;
