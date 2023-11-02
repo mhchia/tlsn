@@ -135,7 +135,7 @@ mod tests {
     use rstest::*;
 
     use crate::fixtures::cert::{appliedzkp, tlsnotary, TestData};
-    use std::time::SystemTime;
+    use instant::SystemTime;
     use tls_core::{dns::ServerName, key::Certificate};
 
     /// Expect chain verification to succeed

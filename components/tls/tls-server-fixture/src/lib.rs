@@ -89,7 +89,7 @@ pub async fn bind_test_server<
             // shutdown.
             if must_delay_when_closing {
                 // delay closing the socket
-                tokio::time::sleep(std::time::Duration::from_millis(CLOSE_DELAY)).await;
+                tokio::time::sleep(instant::Duration::from_millis(CLOSE_DELAY)).await;
             }
             break;
         }
@@ -111,7 +111,7 @@ pub async fn bind_test_server<
                 // spawning because SyncIoBridge must be used on a separate thread
                 tokio::task::spawn_blocking(move || {
                     // give the client some time (e.g. to send their close_notify)
-                    std::thread::sleep(std::time::Duration::from_millis(10));
+                    std::thread::sleep(instant::Duration::from_millis(10));
 
                     // wrap in `SyncIoBridge` since `socket` must be `io::Write`
                     let mut socket = SyncIoBridge::new(socket.into_inner());
@@ -131,7 +131,7 @@ pub async fn bind_test_server<
                 // spawning because SyncIoBridge must be used on a separate thread
                 tokio::task::spawn_blocking(move || {
                     // give the client some time (e.g. to send their close_notify)
-                    std::thread::sleep(std::time::Duration::from_millis(10));
+                    std::thread::sleep(instant::Duration::from_millis(10));
 
                     // wrap in `SyncIoBridge` since `socket` must be `io::Write`
                     let mut socket = SyncIoBridge::new(socket.into_inner());

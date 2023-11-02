@@ -277,7 +277,7 @@ impl ClientCertVerifier for MockClientVerifier {
         &self,
         _end_entity: &Certificate,
         _intermediates: &[Certificate],
-        _now: std::time::SystemTime,
+        _now: instant::SystemTime,
     ) -> Result<ClientCertVerified, Error> {
         (self.verified)()
     }

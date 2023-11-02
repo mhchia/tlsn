@@ -12,7 +12,7 @@ use rustls::{Certificate, ClientConfig, RootCertStore};
 use std::{
     net::{IpAddr, SocketAddr},
     sync::Arc,
-    time::Duration,
+    instant::Duration,
 };
 use tls_server_fixture::{bind_test_server_hyper, CA_CERT_DER, SERVER_DOMAIN};
 use tlsn_prover::tls::{Prover, ProverConfig};

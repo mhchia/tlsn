@@ -259,7 +259,7 @@ mod tests {
 
     #[test]
     fn time_error_mapping() {
-        use std::time::SystemTime;
+        use instant::SystemTime;
 
         let time_error = SystemTime::UNIX_EPOCH
             .duration_since(SystemTime::now())

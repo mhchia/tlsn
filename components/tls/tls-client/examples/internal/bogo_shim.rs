@@ -23,7 +23,7 @@ use std::{
     io::{BufReader, Read, Write},
     net, process,
     sync::Arc,
-    time::SystemTime,
+    instant::SystemTime,
 };
 
 static BOGO_NACK: i32 = 89;
@@ -556,7 +556,7 @@ fn handle_err(err: rustls::Error) -> ! {
     use std::{thread, time};
 
     println!("TLS error: {:?}", err);
-    thread::sleep(time::Duration::from_millis(100));
+    thread::sleep(instant::Duration::from_millis(100));
 
     match err {
         Error::InappropriateHandshakeMessage { .. } | Error::InappropriateMessage { .. } => {

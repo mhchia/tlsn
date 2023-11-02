@@ -1,4 +1,4 @@
-use std::time::Duration;
+use instant::Duration;
 
 use elliptic_curve::pkcs8::DecodePublicKey;
 

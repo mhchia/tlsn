@@ -358,7 +358,7 @@ mod tests {
         let mut buf = [0u8; 11];
         let read = futures::select! {
             read = stream_b.read(&mut buf).fuse() => read.unwrap(),
-            _ = tokio::time::sleep(std::time::Duration::from_secs(5)).fuse() => panic!("timed out"),
+            _ = tokio::time::sleep(instant::Duration::from_secs(5)).fuse() => panic!("timed out"),
         };
 
         assert_eq!(&buf[..read], msg);

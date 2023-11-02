@@ -50,7 +50,7 @@ async fn set_up_tls() -> TlsFixture {
         .unwrap();
 
     // give the server some time to respond
-    std::thread::sleep(std::time::Duration::from_millis(10));
+    std::thread::sleep(instant::Duration::from_millis(10));
 
     let mut plaintext = vec![0u8; 320];
     let n = client_tls_conn.read(&mut plaintext).await.unwrap();
@@ -192,7 +192,7 @@ async fn test_ok_server_close_notify(set_up_tls: impl Future<Output = TlsFixture
     client_tls_conn.flush().await.unwrap();
 
     // give enough time for server's close_notify to arrive
-    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    tokio::time::sleep(instant::Duration::from_millis(20)).await;
 
     client_tls_conn.close().await.unwrap();
 
@@ -221,7 +221,7 @@ async fn test_ok_server_close_notify_and_socket_close(
     client_tls_conn.flush().await.unwrap();
 
     // give enough time for server's close_notify to arrive
-    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    tokio::time::sleep(instant::Duration::from_millis(20)).await;
 
     client_tls_conn.close().await.unwrap();
 
@@ -254,7 +254,7 @@ async fn test_ok_read_after_close(set_up_tls: impl Future<Output = TlsFixture>) 
     client_tls_conn.flush().await.unwrap();
 
     // give enough time to close the socket
-    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    tokio::time::sleep(instant::Duration::from_millis(10)).await;
 
     // try to read some more data
     let mut buf = vec![0u8; 10];
@@ -280,7 +280,7 @@ async fn test_ok_server_no_close_notify(set_up_tls: impl Future<Output = TlsFixt
     client_tls_conn.flush().await.unwrap();
 
     // give enough time to close the socket
-    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    tokio::time::sleep(instant::Duration::from_millis(10)).await;
 
     client_tls_conn.close().await.unwrap();
 
@@ -307,7 +307,7 @@ async fn test_ok_delay_close(set_up_tls: impl Future<Output = TlsFixture>) {
     // closing `client_tls_conn` will cause close_notify to be sent by the client
     client_tls_conn.close().await.unwrap();
 
-    use std::time::Instant;
+    use instant::Instant;
     let now = Instant::now();
     // this will resolve when the server stops delaying closing the socket
     let closed_conn = closed_tls_task.await.unwrap().unwrap();
@@ -336,7 +336,7 @@ async fn test_err_corrupted(set_up_tls: impl Future<Output = TlsFixture>) {
         .unwrap();
     client_tls_conn.flush().await.unwrap();
 
-    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    tokio::time::sleep(instant::Duration::from_millis(10)).await;
     client_tls_conn.close().await.unwrap();
 
     assert_eq!(
@@ -361,7 +361,7 @@ async fn test_err_bad_mac(set_up_tls: impl Future<Output = TlsFixture>) {
         .unwrap();
     client_tls_conn.flush().await.unwrap();
 
-    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    tokio::time::sleep(instant::Duration::from_millis(10)).await;
     client_tls_conn.close().await.unwrap();
 
     assert_eq!(
@@ -386,7 +386,7 @@ async fn test_err_alert(set_up_tls: impl Future<Output = TlsFixture>) {
         .unwrap();
     client_tls_conn.flush().await.unwrap();
 
-    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    tokio::time::sleep(instant::Duration::from_millis(10)).await;
     client_tls_conn.close().await.unwrap();
 
     assert_eq!(
@@ -412,7 +412,7 @@ async fn test_err_write_after_close(set_up_tls: impl Future<Output = TlsFixture>
     client_tls_conn.flush().await.unwrap();
 
     // give enough time to close the socket
-    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    tokio::time::sleep(instant::Duration::from_millis(10)).await;
 
     // try to send some more data
     let res = client_tls_conn
