@@ -7,7 +7,8 @@ use crate::{
     verify::{self, CertificateTransparencyPolicy},
     NoKeyLog,
 };
-use std::{sync::Arc, time::SystemTime};
+use instant::SystemTime;
+use std::sync::Arc;
 use tls_core::{key, suites::SupportedCipherSuite, versions};
 
 impl ConfigBuilder<WantsVerifier> {

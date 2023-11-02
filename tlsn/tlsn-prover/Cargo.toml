@@ -45,3 +45,5 @@ opaque-debug.workspace = true
 bytes.workspace = true
 
 tracing = { workspace = true, optional = true }
+
+instant.workspace = true
