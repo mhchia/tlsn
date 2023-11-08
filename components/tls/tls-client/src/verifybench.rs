@@ -6,7 +6,7 @@
 
 use crate::{anchors, verify, verify::ServerCertVerifier, OwnedTrustAnchor};
 use std::convert::TryInto;
-use std::time::{Duration, Instant, SystemTime};
+use web_time::{Duration, Instant, SystemTime};
 
 use webpki_roots;
 

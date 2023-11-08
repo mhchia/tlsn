@@ -1,17 +1,15 @@
-use instant::{Duration, SystemTime};
-
 /// The timebase for expiring and rolling tickets and ticketing
 /// keys.  This is UNIX wall time in seconds.
 ///
 /// This is guaranteed to be on or after the UNIX epoch.
 #[derive(Clone, Copy, Debug)]
-pub struct TimeBase(Duration);
+pub struct TimeBase(web_time::Duration);
 
 impl TimeBase {
     #[inline]
-    pub fn now() -> Result<Self, ()> {
+    pub fn now() -> Result<Self, web_time::SystemTimeError> {
         Ok(Self(
-            SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?,
+            web_time::SystemTime::now().duration_since(web_time::UNIX_EPOCH)?,
         ))
     }
 

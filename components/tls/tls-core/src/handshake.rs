@@ -1,4 +1,4 @@
-use instant::SystemTime;
+use web_time::SystemTime;
 
 use crate::{
     cert::ServerCertDetails, dns::ServerName, ke::ServerKxDetails, msgs::handshake::Random,

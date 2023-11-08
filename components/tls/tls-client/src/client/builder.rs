@@ -7,7 +7,7 @@ use crate::{
     verify::{self, CertificateTransparencyPolicy},
     NoKeyLog,
 };
-use instant::SystemTime;
+use web_time::SystemTime;
 use std::sync::Arc;
 use tls_core::{key, suites::SupportedCipherSuite, versions};
 

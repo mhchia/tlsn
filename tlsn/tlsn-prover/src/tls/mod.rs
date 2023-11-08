@@ -16,7 +16,7 @@ use ff::ShareConversionReveal;
 use futures::{
     future::FusedFuture, AsyncRead, AsyncWrite, Future, FutureExt, SinkExt, StreamExt, TryFutureExt,
 };
-use instant::SystemTime;
+use web_time::SystemTime;
 use rand::Rng;
 use std::{pin::Pin, sync::Arc};
 use tls_client_async::{bind_client, ClosedConnection, TlsConnection};

@@ -1,4 +1,4 @@
-use instant::{Duration, SystemTime};
+use web_time::{Duration, SystemTime};
 
 use serde::{Deserialize, Serialize};
 
@@ -135,7 +135,7 @@ mod tests {
     use rstest::*;
 
     use crate::fixtures::cert::{appliedzkp, tlsnotary, TestData};
-    use std::time::SystemTime;
+    use web_time::SystemTime;
     use tls_core::{dns::ServerName, key::Certificate};
 
     /// Expect chain verification to succeed

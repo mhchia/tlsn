@@ -8,7 +8,7 @@ use crate::{
         handshake::{DigitallySignedStruct, DistinguishedNames},
     },
 };
-use instant::SystemTime;
+use web_time::SystemTime;
 use ring::digest::Digest;
 use std::convert::TryFrom;
 
@@ -288,11 +288,11 @@ impl ServerCertVerifier for WebPkiVerifier {
         now: SystemTime,
     ) -> Result<ServerCertVerified, Error> {
         let (cert, chain, trustroots) = prepare(end_entity, intermediates, &self.roots)?;
-        // `webpki::Time::try_from` does not work with `instant::SystemTime`.
+        // `webpki::Time::try_from` does not work with `web_time::SystemTime`.
         // To workaround this we convert `SystemTime` to seconds and use
         // `webpki::Time::from_seconds_since_unix_epoch` instead.
         let duration_since_epoch = now
-            .duration_since(SystemTime::UNIX_EPOCH)
+            .duration_since(web_time::UNIX_EPOCH)
             .map_err(|_| Error::FailedToGetCurrentTime)?;
         let seconds_since_unix_epoch = duration_since_epoch.as_secs();
         let webpki_now = webpki::Time::from_seconds_since_unix_epoch(seconds_since_unix_epoch);
