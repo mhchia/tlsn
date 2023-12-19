@@ -64,6 +64,8 @@ async fn json(
         1 => Ok(Json(include_str!("data/1kb.json"))),
         4 => Ok(Json(include_str!("data/4kb.json"))),
         8 => Ok(Json(include_str!("data/8kb.json"))),
+        16 => Ok(Json(include_str!("data/16kb.json"))),
+        32 => Ok(Json(include_str!("data/32kb.json"))),
         _ => Err(StatusCode::NOT_FOUND),
     }
 }

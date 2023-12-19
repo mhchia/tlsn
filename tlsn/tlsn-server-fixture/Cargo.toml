@@ -11,6 +11,8 @@ hyper.workspace = true
 rustls = "0.21.7"
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 tokio-util = { workspace = true, features = ["compat", "io"] }
+tracing = "0.1"
+tracing-subscriber = "0.2"
 
 [[bin]]
 name = "main"
