@@ -10,6 +10,7 @@ use sha2::digest::typenum::array;
 use tlsn_core::proof;
 use tokio::time::error::Elapsed;
 use notary_client::{Accepted, NotarizationRequest, NotaryClient};
+use rustls::{Certificate, RootCertStore};
 use std::ops::Range;
 use tlsn_core::{proof::TlsProof, transcript::get_value_ids};
 use tokio::io::AsyncWriteExt as _;
@@ -134,6 +135,10 @@ async fn main() {
     let api_key = args.get(3).expect("Please provide API key as third argument");
     let api_secret = args.get(4).expect("Please provide API secret as fourth argument");
 
+    // https://github.com/mhchia/tlsn-js/blob/70193c2c38f1fa0c5cf4ef33a685a4d485014604/wasm/prover/src/lib.rs#L158C40-L165
+    let mut root_cert_store = RootCertStore::empty();
+    root_cert_store.add(&certificate).unwrap();
+
     // Build a client to connect to the notary server.
     let notary_client = NotaryClient::builder()
         .host(notary_host)
@@ -141,6 +146,7 @@ async fn main() {
         // WARNING: Always use TLS to connect to notary server, except if notary is running locally
         // e.g. this example, hence `enable_tls` is set to False (else it always defaults to True).
         .enable_tls(true)
+        .root_cert_store(root_cert_store)
         .build()
         .unwrap();
 
